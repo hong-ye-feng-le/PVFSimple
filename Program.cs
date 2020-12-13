@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+
 namespace PVFSimple
 {
     static class Program
@@ -14,9 +15,11 @@ namespace PVFSimple
         [STAThread]
         static void Main()
         {
+            //DevExpressCrack.Crack.Init();//破解dev
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new Form1());
+
         }
     }
 }

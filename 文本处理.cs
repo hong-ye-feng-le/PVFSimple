@@ -5,9 +5,83 @@ using System.Text;
 using System.IO;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
 
 namespace PVFSimple
 {
+
+
+    public class DingWei
+    {
+        
+        [DllImport("shell32.dll", ExactSpelling = true)]
+        private static extern void ILFree(IntPtr pidlList);
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
+        private static extern IntPtr ILCreateFromPathW(string pszPath);
+
+        [DllImport("shell32.dll", ExactSpelling = true)]
+        private static extern int SHOpenFolderAndSelectItems(IntPtr pidlList, uint cild, IntPtr children, uint dwFlags);
+
+        /// <summary>
+        /// 打开路径并定位文件...对于@"h:\Bleacher Report - Hardaway with the safe call ??.mp4"这样的，explorer.exe /select,d:xxx不认，用API整它
+        /// </summary>
+        /// <param name="filePath">文件绝对路径</param>
+        public void ExplorerFile(string filePath)
+        {
+            if (!File.Exists(filePath) && !Directory.Exists(filePath))
+                return;
+
+            if (Directory.Exists(filePath))
+                System.Diagnostics.Process.Start(@"explorer.exe", "/select,\"" + filePath + "\"");
+            else
+            {
+                IntPtr pidlList = ILCreateFromPathW(filePath);
+                if (pidlList != IntPtr.Zero)
+                {
+                    try
+                    {
+                        Marshal.ThrowExceptionForHR(SHOpenFolderAndSelectItems(pidlList, 0, IntPtr.Zero, 0));
+                    }
+                    finally
+                    {
+                        ILFree(pidlList);
+                    }
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// 打开文件或打开文件夹
+        /// </summary>
+        /// <param name="Path">文件绝对路径</param>
+        public void Explorer(string Path)
+        {
+            if (!File.Exists(Path) && !Directory.Exists(Path))
+                return;
+
+            if (Directory.Exists(Path))
+                System.Diagnostics.Process.Start(@"explorer.exe",  Path );
+            else
+            {
+                IntPtr pidlList = ILCreateFromPathW(Path);
+                if (pidlList != IntPtr.Zero)
+                {
+                    try
+                    {
+                        Marshal.ThrowExceptionForHR(SHOpenFolderAndSelectItems(pidlList, 0, IntPtr.Zero, 0));
+                    }
+                    finally
+                    {
+                        ILFree(pidlList);
+                    }
+                }
+            }
+        }
+    }
+
+
     public class 文本文件读写
     {
 
@@ -49,10 +123,11 @@ namespace PVFSimple
 
     }
 
-    public class regex_new
+
+    public class Regex_new
     {
 
-        private MatchCollection 输出;
+        public MatchCollection 输出;
 
         
         /// <summary>
@@ -62,22 +137,19 @@ namespace PVFSimple
         /// </summary>
         public void 创建(string txt,string regex,int ms)
         {
-
-            if (ms==0)
+            switch (ms)
             {
-                输出 =  Regex.Matches(txt, regex, RegexOptions.None);
+                case 0:
+                    输出 = Regex.Matches(txt, regex, RegexOptions.None);
+                    break;
+                case 1:
+                    输出 = Regex.Matches(txt, regex, RegexOptions.IgnoreCase);
+                    break;
+                case 2:
+                    输出 = Regex.Matches(txt, regex, RegexOptions.Multiline);
+                    break;
             }
-            else if (ms == 1)
-            {
-                输出 =  Regex.Matches(txt, regex, RegexOptions.IgnoreCase);
-            }
-            else if (ms == 2)
-            {
-                输出 =  Regex.Matches(txt, regex, RegexOptions.Multiline);
-            }
-
         }
-
 
         /// <summary>
         /// 方便匹配未知文本
@@ -86,7 +158,6 @@ namespace PVFSimple
         /// <returns></returns>
         public string 取消特殊字符(string text)
         {
-
             return Regex.Escape(text);
         }
 
@@ -111,53 +182,28 @@ namespace PVFSimple
            return Regex.Replace(alltxt, regextxt, thtxt);
         }
 
-
         /// <summary>
-        /// 返回某个匹配文本
+        /// 返回某个匹配文本;从1开始
         /// </summary>
         /// <param name="匹配索引">匹配的第几个内容</param>
         /// <returns></returns>
         public string 取匹配文本(int 匹配索引)
         {
-
-            int 计次 = 1;
-            foreach (Match match in 输出)
-            {
-                if (计次 == 匹配索引)
-                {
-                    return match.Value;
-                }
-
-                计次++;
-            }
-
-            return "";
-
+            return 输出[匹配索引-1].Value;
         }
 
+
         /// <summary>
-        /// 返回某个匹配的子文本
+        /// 返回某个匹配的子文本；从1开始
         /// </summary>
         /// <param name="匹配索引">匹配的第几个内容</param>
         /// <param name="子表达式索引">匹配内容的第几个子文本</param>
         /// <returns></returns>
         public string 取子匹配文本(int 匹配索引,int 子表达式索引)
         {
-
-            int 计次 = 1;
-            foreach (Match match in 输出)
-            {
-                if (计次 == 匹配索引)
-                {
-                    return match.Groups[子表达式索引].Value;
-                }
-
-                计次++;
-            }
-
-            return "";
-
+            return 输出[匹配索引-1].Groups[子表达式索引].Value;
         }
+
 
         /// <summary>
         /// 匹配的所有文本加入集合;
@@ -167,61 +213,57 @@ namespace PVFSimple
         /// </summary>
         public void 匹配加入集合(List<string> 集合,bool 是否加入重复,int 转换大小写)
         {
-            if (是否加入重复 == true)
+            switch (是否加入重复)
             {
-
-                foreach (Match match in 输出)
-                {
-
-                    if (转换大小写 == 0)
+                case true:
+                    foreach (Match match in 输出)
                     {
-                        集合.Add(match.Value);
+                        switch (转换大小写)
+                        {
+                            case 0:
+                                集合.Add(match.Value);
+                                break;
+                            case 1:
+                                集合.Add(match.Value.ToUpper());
+                                break;
+                            case 2:
+                                集合.Add(match.Value.ToLower());
+                                break;
+                        }
                     }
-                    else if(转换大小写 == 1)
+                    break;
+                case false:
+                    foreach (Match match in 输出)
                     {
-                        集合.Add(match.Value.ToUpper());
+                        string matchtext = match.Value;
+                        switch (转换大小写)
+                        {
+                            case 0:
+                                if (集合.Contains(matchtext) == false)
+                                {
+                                    集合.Add(matchtext);
+                                }
+                                break;
+                            case 1:
+                                matchtext = matchtext.ToUpper();
+                                if (集合.Contains(matchtext) == false)
+                                {
+                                    集合.Add(matchtext);
+                                }
+                                break;
+                            case 2:
+                                matchtext = matchtext.ToLower();
+                                if (集合.Contains(matchtext) == false)
+                                {
+                                    集合.Add(matchtext);
+                                }
+                                break;
+                        }
                     }
-                    else if (转换大小写 == 2)
-                    {
-                        集合.Add(match.Value.ToLower());
-                    }
-
-                }
-
+                    break;
             }
-            else
-            {
-                foreach (Match match in 输出)
-                {
-
-                    if (转换大小写 == 0)
-                    {
-                        if (集合.Contains(match.Value) == false)
-                        {
-                            集合.Add(match.Value);
-                        }
-                        
-                    }
-                    else if (转换大小写 == 1)
-                    {
-                        if (集合.Contains(match.Value.ToUpper()) == false)
-                        {
-                            集合.Add(match.Value.ToUpper());
-                        }
-                    }
-                    else if (转换大小写 == 2)
-                    {
-                        if (集合.Contains(match.Value.ToLower()) == false)
-                        {
-                            集合.Add(match.Value.ToLower());
-                        }
-                    }
-
-                }
-
-            }
-
         }
+
 
 /// <summary>
         /// 匹配的所有文本加入集合;
@@ -232,63 +274,58 @@ namespace PVFSimple
         /// </summary>
         public void 子匹配加入集合(List<string> 集合,int 子匹配索引, bool 是否加入重复, int 转换大小写)
         {
-            if (是否加入重复 == true)
+            switch (是否加入重复)
             {
-
-                foreach (Match match in 输出)
-                {
-
-                    if (转换大小写 == 0)
+                case true:
+                    foreach (Match match in 输出)
                     {
-                        集合.Add(match.Groups[子匹配索引].Value);
-                    }
-                    else if (转换大小写 == 1)
-                    {
-                        集合.Add(match.Groups[子匹配索引].Value.ToUpper());
-                    }
-                    else if (转换大小写 == 2)
-                    {
-                        集合.Add(match.Groups[子匹配索引].Value.ToLower());
-                    }
+                        switch (转换大小写)
+                        {
+                            case 0:
+                                集合.Add(match.Groups[子匹配索引].Value);
+                                break;
+                            case 1:
+                                集合.Add(match.Groups[子匹配索引].Value.ToUpper());
+                                break;
+                            case 2:
+                                集合.Add(match.Groups[子匹配索引].Value.ToLower());
+                                break;
+                        }
 
-                }
-
+                    }
+                    break;
+                case false:
+                    foreach (Match match in 输出)
+                    {
+                        string zpp_txt = match.Groups[子匹配索引].Value;
+                        switch (转换大小写)
+                        {
+                            case 0:
+                                if (集合.Contains(zpp_txt) == false)
+                                {
+                                    集合.Add(zpp_txt);
+                                }
+                                break;
+                            case 1:
+                                zpp_txt = zpp_txt.ToUpper();
+                                if (集合.Contains(zpp_txt) == false)
+                                {
+                                    集合.Add(zpp_txt);
+                                }
+                                break;
+                            case 2:
+                                zpp_txt = zpp_txt.ToLower();
+                                if (集合.Contains(zpp_txt) == false)
+                                {
+                                    集合.Add(zpp_txt);
+                                }
+                                break;
+                        }
+                    }
+                    break;
             }
-            else
-            {
-                foreach (Match match in 输出)
-                {
-                    string zpp_txt = match.Groups[子匹配索引].Value;
-                    if (转换大小写 == 0)
-                    {
-                        if (集合.Contains(zpp_txt) == false)
-                        {
-                            集合.Add(zpp_txt);
-                        }
-
-                    }
-                    else if (转换大小写 == 1)
-                    {
-                        zpp_txt = zpp_txt.ToUpper();
-                        if (集合.Contains(zpp_txt) == false)
-                        {
-                            集合.Add(zpp_txt);
-                        }
-                    }
-                    else if (转换大小写 == 2)
-                    {
-                        zpp_txt = zpp_txt.ToLower();
-                        if (集合.Contains(zpp_txt) == false)
-                        {
-                            集合.Add(zpp_txt);
-                        }
-                    }
-
-                }
-
-            }
-
         }
+
 
         /// <summary>
         /// 返回字符串型、捕获的所有匹配文本
@@ -322,7 +359,6 @@ namespace PVFSimple
 
         public MatchCollection 正则返回集合()
         {
-
             return 输出;
         }
 

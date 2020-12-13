@@ -7,21 +7,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Text.RegularExpressions;
 
-namespace PVFSimple
+namespace PVFSimple.通用窗口
 {
-    public partial class 批量载入 : Form
+    public partial class 导出礼包查询代码 : Form
     {
-     
-        public 批量载入()
+        public 导出礼包查询代码()
         {
             InitializeComponent();
-        }
-
-        public void button1_Click(object sender, EventArgs e)
-        {
-            this.Close();
         }
     }
 }
